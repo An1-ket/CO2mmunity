@@ -1,0 +1,79 @@
+import serial
+import os
+import glob
+import board
+import busio
+import adafruit_ssd1306
+from PIL import Image, ImageDraw, ImageFont
+from time import sleep
+
+# OLED Setup
+i2c = busio.I2C(board.SCL, board.SDA)
+oled = adafruit_ssd1306.SSD1306_I2C(128, 64, i2c)
+
+# Create blank image for drawing
+width = oled.width
+height = oled.height
+image = Image.new("1", (width, height))
+draw = ImageDraw.Draw(image)
+
+# Load a default font
+font = ImageFont.load_default()
+
+# Function to read CO₂ from K33 ELG sensor
+def read_co2():
+    try:
+        ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
+        ser.write(b'\xFE\x44\x00\x08\x02\x9F\x25')  # Command to read CO2
+        response = ser.read(7)
+        ser.close()
+
+        if len(response) == 7:
+            high, low = response[3], response[4]
+            co2_ppm = (high << 8) | low
+            return co2_ppm
+    except Exception as e:
+        print(f"Error reading CO₂ sensor: {e}")
+    return None
+
+# Function to read temperature from DS18B20
+def read_temperature():
+    try:
+        base_dir = '/sys/bus/w1/devices/'
+        device_folders = glob.glob(base_dir + '28*')
+        
+        if not device_folders:
+            print("No DS18B20 sensor found")
+            return None
+
+        device_file = device_folders[0] + '/w1_slave'
+
+        with open(device_file, 'r') as f:
+            lines = f.readlines()
+
+        if 'YES' in lines[0]:
+            temp_str = lines[1].split('t=')[-1]
+            temp_c = float(temp_str) / 1000.0
+            return temp_c
+    except Exception as e:
+        print(f"Error reading temperature sensor: {e}")
+    return None
+
+# Function to display data on OLED
+def display_data(co2, temp):
+    draw.rectangle((0, 0, width, height), outline=0, fill=0)  # Clear screen
+    draw.text((10, 10), f"CO2: {co2 if co2 is not None else 'N/A'} ppm", font=font, fill=255)
+    draw.text((10, 30), f"Temp: {temp if temp is not None else 'N/A'} C", font=font, fill=255)
+
+    oled.image(image)
+    oled.show()
+
+# Main loop to update display
+try:
+    while True:
+        co2 = read_co2()
+        temp = read_temperature()
+        display_data(co2, temp)
+        sleep(2)
+except KeyboardInterrupt:
+    print("Exiting...")

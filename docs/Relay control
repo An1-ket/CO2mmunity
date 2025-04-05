@@ -1,0 +1,24 @@
+import gpiozero
+
+# Relay Setup (Adjust GPIO pins as needed)
+relays = [gpiozero.OutputDevice(pin, active_high=False, initial_value=False) for pin in [5, 6, 13, 19, 26]]
+
+def toggle_relay(relay_number):
+    relay = relays[relay_number - 1]
+    relay.toggle()
+    print(f"Relay {relay_number} {'ON' if relay.value else 'OFF'}")
+
+def control_relays():
+    print("Relay Control Active! Press (1-5) to Toggle, 'q' to Quit")
+    while True:
+        cmd = input("\nEnter relay number (1-5) to toggle or 'q' to quit: ")
+        if cmd == "q":
+            break
+        elif cmd.isdigit() and 1 <= int(cmd) <= 5:
+            toggle_relay(int(cmd))
+        else:
+            print("Invalid input. Try again.")
+
+if __name__ == "__main__":
+    control_relays()
+

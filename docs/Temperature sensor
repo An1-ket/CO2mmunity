@@ -1,0 +1,21 @@
+import os
+import glob
+
+def read_temperature():
+    base_dir = '/sys/bus/w1/devices/'
+    device_folder = glob.glob(base_dir + '28*')[0]
+    device_file = device_folder + '/w1_slave'
+
+    with open(device_file, 'r') as f:
+        lines = f.readlines()
+
+    if 'YES' in lines[0]:
+        temp_str = lines[1].split('t=')[-1]
+        temp_c = float(temp_str) / 1000.0
+        return temp_c
+    return None
+
+if __name__ == "__main__":
+    temp = read_temperature()
+    print(f"Temperature: {temp}°C")
+

@@ -1,0 +1,45 @@
+Python Libraries Used:
+
+1) gpiozero – For controlling relays via GPIO.
+
+2) lgpio – Alternative GPIO control for stable relay operations.
+
+3) pyserial – If used for debugging or sensor communication over UART.
+
+4) adafruit-ssd1306 – For displaying data on the OLED screen.
+
+5) PIL (Pillow) – For handling graphics on the OLED display.
+
+6) time – Standard library for handling delays and intervals.
+
+7) threading – To run OLED updates and keyboard inputs concurrently.
+
+8) os – If used for system-level operations (not mandatory).
+
+
+
+
+Source Scripts Running on Raspberry Pi
+
+a) Main Python Script
+
+i)   Reads CO₂ data from the K33 ELG sensor via USB.
+
+ii)  Reads temperature from the DS18B20 sensor via 1-Wire GPIO.
+
+iii) Displays real-time data on the SSD1306 OLED screen.
+
+iv)  Controls 5 relays via keyboard input.
+
+
+b) Additional Scripts
+
+For logging data, a separate script is be running for storage (CSV, SQLite, etc.).
+
+
+c) External Dependencies
+
+i)  K33 ELG Sensor Communication (Handled via serial over USB).
+
+ii) DS18B20 Sensor (Uses /sys/bus/w1/devices/ in Raspberry Pi OS).
+

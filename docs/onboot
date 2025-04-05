@@ -1,0 +1,23 @@
+Step 1) Type in terminal 
+
+   sudo nano /etc/systemd/system/co2_monitor.service
+
+Step 2) Write the given text over there, then ctrl+x > y > enter
+
+Text to be written: 
+
+
+
+[Unit]
+Description=CO2 and Temperature Monitoring with OLED
+After=network.target
+
+[Service]
+ExecStart=/home/arcnet/allunits/venv/bin/python3 /home/arcnet/allunits/final2.py
+WorkingDirectory=/home/arcnet/allunits
+Restart=always
+User=arcnet
+
+[Install]
+WantedBy=multi-user.target
+

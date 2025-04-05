@@ -1,0 +1,85 @@
+import time
+import serial
+import csv
+from datetime import datetime
+import glob
+
+# K33 ELG Serial Setup
+ser = serial.Serial('/dev/ttyUSB0', baudrate=9600, timeout=1)
+
+# DS18B20 Sensor Setup
+def read_ds18b20():
+    """Reads temperature from DS18B20 sensor"""
+    try:
+        base_dir = "/sys/bus/w1/devices/"
+        device_folder = glob.glob(base_dir + "28*")[0]
+        device_file = device_folder + "/w1_slave"
+
+        with open(device_file, "r") as f:
+            lines = f.readlines()
+        
+        if "YES" in lines[0]:
+            temp_str = lines[1].split("t=")[-1]
+            return round(int(temp_str) / 1000.0, 2)
+        else:
+            return None
+    except Exception:
+        return None  # Return None if sensor is not found or error occurs
+
+# CSV File Setup
+csv_filename = "/home/arcnet/allunits/co2_temp_log.csv"
+
+# Write CSV header if file does not exist
+try:
+    with open(csv_filename, 'x', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(["Timestamp", "CO2 (ppm)", "K33 Temp (°C)", "DS18B20 Temp (°C)"])
+except FileExistsError:
+    pass  # File already exists, continue logging
+
+def read_k33():
+    """Reads CO2 and temperature data from the K33 ELG sensor"""
+    ser.write(b'\xFE\x44\x00\x08\x02\x9F\x25')  # Command to read CO2
+    time.sleep(0.1)
+    
+    response = ser.read(7)
+    
+    if len(response) == 7:
+        high_byte = response[3]
+        low_byte = response[4]
+        co2 = (high_byte << 8) | low_byte
+        
+        # Read Temperature
+        ser.write(b'\xFE\x44\x00\x03\x00\x00\x00\xF6')
+        time.sleep(0.1)
+        temp_response = ser.read(7)
+        
+        if len(temp_response) == 7:
+            temp_raw = (temp_response[3] << 8) | temp_response[4]
+            k33_temp = (temp_raw / 10) - 40  # Convert raw value to Celsius
+        else:
+            k33_temp = None
+
+        return co2, k33_temp
+    return None, None
+
+# Main Logging Loop
+while True:
+    try:
+        co2, k33_temp = read_k33()
+        ds18b20_temp = read_ds18b20()
+
+        if co2 is not None and k33_temp is not None and ds18b20_temp is not None:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"[{timestamp}] CO2: {co2} ppm, K33 Temp: {k33_temp:.1f} C, DS18B20 Temp: {ds18b20_temp:.1f} C")
+
+            # Save data to CSV
+            with open(csv_filename, 'a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([timestamp, co2, k33_temp, ds18b20_temp])
+
+        time.sleep(20)  # Wait 20 seconds before next reading
+    except Exception as e:
+        print(f"Error: {e}")
+        time.sleep(5)  # Retry after 5 seconds if error occurs
+
